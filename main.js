@@ -18,11 +18,12 @@ let stats = {
 
 
 let makes = [];
+let remotes = [];
 
 let errorLog = [];
 function decodeSheet() {
     //Settings for sheet
-    let setCols = 19;
+    let setCols = 20;
     //End
 
     let msheet = sheet.split(`	`);
@@ -52,6 +53,7 @@ function decodeSheet() {
                     year2: '',
                     make: '',
                     model: '',
+                    notes: '',
                 }
                 let mode = 1; //1 == year, 2 = make, 3 = model
                 for (let p = 0; p < ymm[k].length; p++) {
@@ -80,6 +82,30 @@ function decodeSheet() {
                 ymmObj.model = ymmObj.model.toLowerCase();
                 if (ymmObj.model.charAt(0) == ' ') ymmObj.model = ymmObj.model.substring(1,ymmObj.model.length);
                 if (ymmObj.model.charAt(ymmObj.model.length-1) == ' ') ymmObj.model = ymmObj.model.substring(0,ymmObj.model.length-1);
+                //Seperate Notes from Model if needed
+                let startNotes = false;
+                let newModel = '';
+                for (let p = 0; p < ymmObj.model.length; p++ ) {
+                    if (ymmObj.model.charAt(p) == '(') {
+                        startNotes = true;
+                        if (newModel.charAt(newModel.length -1) == " ") {
+                            newModel = newModel.substring(0,newModel.length - 1);
+                        }
+                        continue;
+                    }
+                    if (ymmObj.model.charAt(p) == ')') {
+                        startNotes = false;
+                        break;
+                    }
+                    if (startNotes) ymmObj.notes += ymmObj.model.charAt(p);
+                    else newModel += ymmObj.model.charAt(p);
+
+                }
+                if (newModel.charAt(newModel.length -1) == " ") {
+                    newModel = newModel.substring(0,newModel.length - 1);
+                }
+                ymmObj.model = newModel;
+
                 ymms.push(ymmObj);
 				if (ymmObj.model == '') {
 					errorLog.push({
@@ -117,8 +143,8 @@ function decodeSheet() {
 
         let obj = {
             car: nsheet[m],
-            col: Number(nsheet[m+1]),
-            row: nsheet[m+2],
+            col: nsheet[m+1],
+            row: Number(nsheet[m+2]),
             ymm: ymms,
             fccid: nsheet[m+4],
             model: nsheet[m+5],
@@ -157,6 +183,7 @@ function decodeSheet() {
         for (let j = 0; j < lines[i].ymm.length; j++) {
             let mmake = lines[i].ymm[j].make;
             let mmodel = lines[i].ymm[j].model;
+            let mnotes = lines[i].ymm[j].notes;
             for (let k = 0; k < (lines[i].ymm[j].year2-lines[i].ymm[j].year1)+1; k++) {
                 let l = lines[i];
                 
@@ -203,6 +230,7 @@ function decodeSheet() {
                 }
 
                 makes[found].models[found2].years[found3].keys.push({
+                    keyNotes: mnotes,
                     col: l.col,
                     row: l.row,
                     car: l.car,
@@ -227,6 +255,7 @@ function decodeSheet() {
                 
 
                 let c = {
+                    keyNotes: mnotes,
                     make: mmake,
                     model: mmodel,
                     year: lines[i].ymm[j].year1+k,
@@ -288,17 +317,17 @@ function decodeSheet() {
     }
 }
 let carColors = [
-    ['FCA','lightblue'],
-    ['FMC','green'],
-    ['GM','yellow'],
-    ['HMC','red'],
-    ['HMG','blue'],
-    ['MAZ','lime'],
-    ['MIT','white'],
-    ['NMC','lightyellow'],
-    ['SUB','orange'],
-    ['TOY','pink'],
-    ['EXT','brown'],
+    ['FCA','#9fc5e8'],
+    ['FMC','#38761d'],
+    ['GM','#f1c232'],
+    ['HMC','#ff0000'],
+    ['HMG','#0b5394'],
+    ['MAZ','#00ff00'],
+    ['MIT','#8e7cc3'],
+    ['NMC','#ffe599'],
+    ['SUB','#ff9900'],
+    ['TOY','#f4cccc'],
+    ['EXT','#7f6000'],
 ]
 function findColor(car) {
     for (let i = 0; i < carColors.length; i++) {
@@ -311,7 +340,7 @@ let carObj = decodeSheet();
 changeStats('price');
 carLines = carObj.lines;
 let carMakes = carObj.makes;
-makeTableMap(carLines);
+makeTableMap();
 let dataMakes = $('makes');
 let dataModels = $('models');
 let dataYears = $('years');
@@ -339,7 +368,7 @@ function clear() {
     selectedYear = false;
 
     setupCars('makes');
-    makeTableMap(carObj.lines)
+    makeTableMap()
 }
 
 //Draw Mini boxes for choosing which car
@@ -492,9 +521,6 @@ function triggerYearChange() {
     keyBoxes.innerHTML = '';
     $('pullUp').style.display = 'none';
 
-    
-    let selectedType = false;
-
     let found = false;
     for (let i = 0; i < carMakes[selectedMake].models[selectedModel].years.length; i++) {
         if (carMakes[selectedMake].models[selectedModel].years[i].year == inputYears.value) found = i;
@@ -515,7 +541,7 @@ function triggerYearChange() {
             //Check If Key Box Should Be Present
             let pass = true;
             let value = $('searchBy').value;
-            if (boxes[i].itemType !== value) pass = false;
+            if (st.searchType !== value) pass = false;
             if (value == 'all') pass = true;
 
             if (!pass) continue;
@@ -530,37 +556,37 @@ function triggerYearChange() {
 			if (boxes[i].amount < 1) {
 				div.style.background = 'pink';
 			}
+            
+            let keyBoxId = div.create('div');
+            keyBoxId.className = 'keyboxItem';
+            keyBoxId.id = 'keyBoxLocation'
+            keyBoxId.innerHTML = 'Location: ' + boxes[i].col.toUpperCase() + boxes[i].row;
 
-            if (st.buttons) {
+            if (box.keyNotes) {
+                let type = div.create('div');
+                type.className = 'keyboxItem';
+                type.id = 'keyBoxItemNotes'
+                type.innerHTML = 'Notes: ' + box.keyNotes.toUpperCase();
+            }
+
+            if (st.buttons && st.keyVSitem == 'key') {
                 let type = div.create('div');
                 type.className = 'keyboxItem';
                 type.innerHTML = 'Key Type: ' + box.type;
             }
-            if (st.itemType) {
+            if (st.itemType && st.keyVSitem == 'item') {
                 let type = div.create('div');
                 type.className = 'keyboxItem';
                 type.innerHTML = 'Item Type: ' + box.itemType.toUpperCase();
             }
 
             
-            let keyBoxId = div.create('div');
-            keyBoxId.className = 'keyboxItem';
-            keyBoxId.innerHTML = 'Key Box ID: ' + boxes[i].car + '-' + boxes[i].col + boxes[i].row.toUpperCase();
-            /*
-            let car = div.create('div');
-            car.className = 'keyboxItem';
-            car.innerHTML = 'Group: ' + boxes[i].car;
-            let col = div.create('div');
-            col.className = 'keyboxItem';
-            col.innerHTML = 'Column: ' + boxes[i].col;
-            let row = div.create('div');
-            row.className = 'keyboxItem';
-            row.innerHTML = 'Row: ' + boxes[i].row.toUpperCase();
-            */
 
             let amt = div.create('div');
             amt.className = 'keyboxItem';
-            amt.innerHTML = box.itemType.toUpperCase() + 'S Left: ' + box.amount;
+            let useName = box.itemType.toUpperCase();
+            if (st.altName) useName = st.altName.toUpperCase();
+            amt.innerHTML = useName + 'S Left: ' + box.amount;
 
             
             if (st.retail) {
@@ -581,9 +607,7 @@ function triggerYearChange() {
 			
             div.onclick = function() {
                 let car = this.box;
-                makeTableMap(carObj.lines)
-                $(car.car + car.col + car.row).className = 'keyBoxSelected';
-                $(car.car + car.col + car.row).style.background = 'white';
+                makeTableMap(car.col,car.row)
                 pullUp(car);
 				for (let i = 1; i < keyBoxesShown + 1; i++) {
 					$('keyBox' + i).style.border = '3px solid black';
@@ -634,14 +658,11 @@ function saveCookies() {
 	ls.save("keyList",toSave);
 }
 
-function makeTableMap(lines) {
-    let abc = 'abcdefghijklmnopqrstuvwxyz';
-    let cols = [];
-    let height = 0;
-    let length = 0;
-    let on = false;
-    let oldFam = false;
-    let onFam = false;
+function makeTableMap(ccol = "FALSE",crow = "FALSE",lines = carObj.lines) { 
+    remotes = [];
+    let abc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','O','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AC','AD','AE','AF','AG'];
+    let height = 12;
+    let length = 32;
     let order = ['TOY','SUB','MAZ','HMC','FMC','GM','HMG','NMC','FCA','MIT','EXT'];
     let newLines = [];
     for (let i = 0; i < order.length; i++) {
@@ -651,30 +672,6 @@ function makeTableMap(lines) {
     }
 
     lines = newLines;
-    for (let i = 0; i < lines.length; i++) {
-        let l = lines[i];
-
-        //Fix Height
-        let charAt = 0;
-        for (let j = 0; j < abc.length; j++) {
-            if (l.row == abc.charAt(j)) charAt = j;
-        }
-        if (charAt > height) height = charAt;
-        //Fix Width
-        if (on != l.col || (on == 1 && l.car != oldFam) )  {
-            on = l.col;
-            
-            oldFam = l.car;
-            if (oldFam == false) oldFam = onFam;
-
-            length++;
-            cols.push({
-                col: l.col,
-                fam: l.car,
-            })
-        }
-    }
-	height++;
 
     let table = $('tableMap');
     table.innerHTML = '';
@@ -684,25 +681,32 @@ function makeTableMap(lines) {
             if (i == -1) {
                 let cell = row.insertCell(0);
                 cell.className = 'keyBoxNumber';
-                if (j > -1) cell.innerHTML = cols[j].col;
+                if (j > -1) cell.innerHTML = abc[j];
                 if (j+1 == 0) cell.innerHTML = '';
             } else {
                 if (j == -1) {
                     let cell = row.insertCell(0);
                     cell.className = 'keyBoxLetter';
-                    cell.innerHTML = abc.charAt(i).toUpperCase();
+                    cell.innerHTML = i+1;
                 } else {
                     let cell = row.insertCell(0);
                     cell.className = 'keyBox';
                     
-                    cell.row = abc.charAt(i);
-                    cell.fam = cols[j].fam;
-                    cell.col = cols[j].col;
+                    cell.row = i+1;
+                    cell.col = abc[j];
 					
+                    let color;
+                    if (getBoxFromId(cell.col + cell.row)) {
+                        color = findColor(getBoxFromId(cell.col + cell.row).car)
+                    }
+                    if (cell.row == crow && cell.col.toLowerCase() == ccol.toLowerCase())  {
+                        cell.className = 'keyBoxSelected';
+                        color = 'white';
+                    }
                     cell.css({
-                        background: findColor(cell.fam),
+                        background: color,
                     })
-
+                    
                     cell.style.border = '1px solid #333';
                     if (j % 8 == 0) {
                         cell.style.borderLeft = '3px solid black';
@@ -710,10 +714,10 @@ function makeTableMap(lines) {
                     if (i % 6 == 0) {
                         cell.style.borderTop = '3px solid black';
                     }
-					
-                    cell.id = cell.fam + cell.col + cell.row;
+                    cell.id = cell.col.toLowerCase() + cell.row;
                     cell.line = findLineFromCCR(cell.id);
                     if (cell.line) {
+                        if (cell.line.itemType.toLowerCase() == 'remote') remotes.push(cell.line);
                         cell.innerHTML = cell.line.itemType.charAt(0).toUpperCase();
                         if (cell.innerHTML == 'K' || cell.innerHTML == 'P') cell.innerHTML = '';
                     }
@@ -737,14 +741,13 @@ function makeTableMap(lines) {
     }
 }
 function getItemFromBox(box) {
-	let bcar = box.car;
 	let brow = box.row;
 	let bcol = box.col;
 	
 	let foundLine = false;
 	for (let i = 0; i < carObj.lines.length; i++) {
 		let c = carObj.lines[i];
-		if (c.car === bcar && c.row === brow && c.col === bcol) {
+		if (c.row === brow && c.col === bcol) {
 			foundLine = i;
 		}
 	}
@@ -757,7 +760,7 @@ function getItemFromBox(box) {
 				let y = m.years[k];
 				for (let p = 0; p < y.keys.length; p++) {
 					let a = y.keys[p];
-					if (a.car === bcar && a.row === brow && a.col === bcol) {
+					if (a.row === brow && a.col === bcol) {
 						foundMakes.push([i,j,k,p]);
 					}
 				}
@@ -773,7 +776,7 @@ function getBoxFromId(id) {
     let box = false;
     for (let i = 0; i < carObj.lines.length; i++) {
         let cl = carObj.lines[i];
-        if ((cl.car + cl.col + cl.row + '').toLowerCase() == id.toLowerCase()) box = i;
+        if ((cl.col + cl.row + '').toLowerCase() == id.toLowerCase()) box = i;
     }
     return carObj.lines[box];
 }
@@ -785,7 +788,9 @@ itemTypes.push({
     type: 'key',
     color: 'black',
     colorLB: false,
+    keyVSitem: 'key',
     canSearch: true,
+    searchType: 'key',
     location: true,
     itemType: false,
     buttons: true,
@@ -806,12 +811,14 @@ itemTypes.push({
 })
 itemTypes.push({
     type: 'remote',
-    color: '#7CFC00',
-    colorLB: '#7CFC00',
+    color: '#008833',
+    colorLB: '#65a765',
     canSearch: true,
+    searchType: 'remote',
+    keyVSitem: 'item',
     location: true,
     itemType: true,
-    buttons: false,
+    buttons: true,
     frequency: true,
     amount: true,
     battery: true,
@@ -832,6 +839,8 @@ itemTypes.push({
     color: 'yellow',
     colorLB: 'yellow',
     canSearch: true,
+    keyVSitem: 'key',
+    searchType: 'shell',
     location: true,
     itemType: false,
     buttons: true,
@@ -854,10 +863,12 @@ itemTypes.push({
     type: 'chip',
     color: 'black',
     colorLB: false,
+    keyVSitem: 'item',
+    searchType: 'chip',
     canSearch: true,
     location: true,
     itemType: true,
-    buttons: false,
+    buttons: true,
     frequency: false,
     battery: false,
     amount: true,
@@ -877,10 +888,12 @@ itemTypes.push({
     type: 'blade',
     color: 'white',
     colorLB: 'white',
+    searchType: 'blade',
     canSearch: true,
     location: true,
+    keyVSitem: 'item',
     itemType: true,
-    buttons: false,
+    buttons: true,
     frequency: false,
     battery: false,
     amount: true,
@@ -899,9 +912,11 @@ itemTypes.push({
 itemTypes.push({
     type: 'extra',
     color: 'black',
+    searchType: false,
     colorLB: false,
     canSearch: false,
     location: true,
+    keyVSitem: 'item',
     itemType: true,
     buttons: false,
     battery: false,
@@ -922,9 +937,11 @@ itemTypes.push({
 itemTypes.push({
     type: 'empty',
     color: 'black',
+    searchType: false,
     colorLB: false,
     battery: false,
     canSearch: false,
+    keyVSitem: 'item',
     location: false,
     itemType: true,
     buttons: false,
@@ -944,14 +961,16 @@ itemTypes.push({
 })
 itemTypes.push({
     type: 'pt',
+    searchType: 'key',
     altName: 'key',
     color: 'black',
     colorLB: false,
     battery: false,
+    keyVSitem: 'key',
     canSearch: true,
     location: true,
     itemType: true,
-    buttons: false,
+    buttons: true,
     frequency: false,
     amount: true,
     chip: true,
@@ -974,8 +993,8 @@ for (let i = 0; i < itemTypes.length; i++) {
     if (!itemTypes[i].canSearch) break;
 
     option = $('searchBy').create('option');
-    option.value = itemTypes[i].type;
-    option.innerHTML = itemTypes[i].type.toUpperCase() + 'S';
+    option.value = itemTypes[i].searchType;
+    option.innerHTML = itemTypes[i].searchType.toUpperCase() + 'S';
 }
 
 function pullUp(box) {
@@ -998,17 +1017,26 @@ function pullUp(box) {
 
 	$('.amountBtn')[0].style.display = selectedType.buttons ? 'block' : 'none';
 	$('.amountBtn')[1].style.display = selectedType.buttons ? 'block' : 'none';
+	$('.amountBtn2').style.display = selectedType.buttons ? 'block' : 'none';
     if (selectedType.goToCCR) {
 		$('puGoToCCR').style.display = 'block';
 		$('puGoToCCR').a = box.model;
+        let r = '', c = '';
+        for (let i = 0; i < box.model.length; i++) {
+            if (isNaN(box.model.charAt(i))) r += box.model.charAt(i);
+            else c += box.model.charAt(i);
+        }
+        $('puGoToCCR').r = r;
+        $('puGoToCCR').c = c;
 		$('puGoToCCR').onclick = function() {
 			pullUp(getBoxFromId(this.a));
+            makeTableMap(this.r,this.c);
 		}
     } else $('puGoToCCR').style.display = 'none';
 
     $('identification').style.display = 'block';
     if (box === undefined) $('identification').innerHTML = 'Key Box Is Empty';
-    else if (selectedType.location) $('identification').innerHTML = box.car + '-' + box.col + box.row.toUpperCase();
+    else if (selectedType.location) $('identification').innerHTML = box.col.toUpperCase() + box.row;
     else $('identification').style.display = 'none';
 
 	if (!selectedType.buttons) $('puType').style.display = 'none';
@@ -1088,7 +1116,7 @@ function pullUp(box) {
 		for (let i = 0; i < carArr.length; i++) {
 			let b = carArr[i];
 			let div = carList.create('div');
-			div.innerHTML = b.year1 + '-' + b.year2 + ' ' + b.make + ' ' + b.model;
+			div.innerHTML = b.year1 + '-' + b.year2 + ' ' + b.make + ' ' + b.model + ' ' + b.notes;
 		}
 
     }
@@ -1142,10 +1170,12 @@ function adjustAmt(amt,skip = false) {
 	if (currentBox.amount + amt < 0) return;
 	
 	let obj = getItemFromBox(currentBox);
-	carObj.lines[obj.line].amount += amt;
+	if (amt === 0) carObj.lines[obj.line].amount = 0;
+    else carObj.lines[obj.line].amount += amt;
 	for (let i = 0; i < obj.makes.length; i++) {
 		let a = obj.makes[i];
-		carObj.makes[a[0]].models[a[1]].years[a[2]].keys[a[3]].amount += amt;
+        if (amt === 0) carObj.makes[a[0]].models[a[1]].years[a[2]].keys[a[3]].amount = 0;
+		else carObj.makes[a[0]].models[a[1]].years[a[2]].keys[a[3]].amount += amt;
 	}
 	changeStats('price');
 	
@@ -1157,18 +1187,56 @@ function adjustAmt(amt,skip = false) {
 
 function findLineFromCCR(ccr) {
 	let obj = {
-		car: '',
 		col: '',
 		row: ''
 	}
 	for (let i = 0; i < ccr.length; i++) {
-		if (obj.col === '') {
-			if (!isNaN(Number(ccr.charAt(i)))) obj.col = Number(ccr.charAt(i))
-			else obj.car += ccr.charAt(i);
-		} obj.row = ccr.charAt(i).toLowerCase();
+        if (!isNaN(Number(ccr.charAt(i)))) obj.row += Number(ccr.charAt(i))
+        else obj.col += ccr.charAt(i).toLowerCase();
 	}
+
 	for (let i = 0; i < carObj.lines.length; i++) {
 		let line = carObj.lines[i]
-		if (line.car == obj.car && line.row == obj.row && line.col == obj.col) return carObj.lines[i];
+		if (line.row == obj.row && line.col == obj.col) return carObj.lines[i];
 	}
+}
+
+$('remoteViewerButton').onclick = remoteViewerPopup;
+$('remoteViewer').style.display = 'none';
+function remoteViewerPopup() {
+    if ($('remoteViewer').style.display == 'none') {
+        $('remoteViewer').style.display = 'block';
+        $('remoteBottom').style.display = 'block';
+        $('remoteViewer').innerHTML = '';
+        $('remoteViewerButton').innerHTML = 'Key Viewer';
+
+        let x = 10;
+        let length = (window.innerWidth-(x*6)) / x;
+        let maxHeight = window.innerHeight - 25;
+        let y = maxHeight % length;
+
+        for (let i = 0; i < remotes.length; i++) {
+            let remoteBox = $('remoteViewer').create('img');
+            remoteBox.id = 'remoteHolder';
+            remoteBox.width = length;
+            remoteBox.height = length;
+            remoteBox.box = remotes[i].col.toUpperCase() + remotes[i].row;
+            remoteBox.onclick = function() {
+                pullUp(getBoxFromId(this.box));
+                makeTableMap(getBoxFromId(this.box).col,getBoxFromId(this.box).row);
+                remoteViewerPopup();
+            }
+            remoteBox.css({
+                cursor: 'pointer',
+                margin: "0px",
+                padding: '0px',
+            })
+            remoteBox.src = remotes[i].imgLink;
+        }
+
+    } else {
+        $('remoteViewer').style.display = 'none';
+        $('remoteViewerButton').innerHTML = 'Remote Viewer';
+        $('remoteBottom').style.display = 'none';
+    }
 }
