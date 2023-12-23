@@ -17,6 +17,11 @@ body {
     margin-top: 9px;
     margin-left: 10px;
 }
+#keyBoxItemNotes {
+    color: 'red';
+    font-style: italic;
+    font-weight: bold;
+}
 #clearButton {
     margin-top: 10px;
     background:white;
@@ -100,6 +105,8 @@ body {
     text-align: center;
     background: gray;
     cursor: pointer;
+    font-weight: bold;
+    user-select: none;
 }
 .keyBoxSelected {
     border: 1px solid white;
@@ -108,11 +115,17 @@ body {
     max-height: 10px;
     line-height: 10px;
     text-align: center;
+    font-weight: bold;
     height: 10px;
     cursor: pointer;
 }
+.keyBoxSelected:hover {
+
+    border: 1px solid white !important;
+}
 .keyBox:hover {
-    border: 1px solid gold;
+
+    border: 1px solid white !important;
 }
 .keyBoxNumber {
     user-select: none;
@@ -120,6 +133,7 @@ body {
 }
 .keyBoxLetter {
     user-select: none;
+    text-align: center;
 }
 #tableMap {
     position: absolute;
@@ -156,7 +170,7 @@ body {
     width: 80%;
     height: 80%;
     box-shadow: rgba(0, 0, 0, 0.3) 0px 19px 38px, rgba(0, 0, 0, 0.22) 0px 15px 12px;
-    background: gray;
+    background: lightgrey;
     border-radius: 5px;
 }
 #identification {
@@ -204,6 +218,22 @@ body {
 .amountBtn:hover {
 	background: lightgray;
 }
+.amountBtn2 {
+	cursor: pointer;
+	width: 80px;
+	height: 20px;
+	background: white;
+	border: 1px solid black;
+	border-radius: 3px;
+	user-select: none;
+	text-align: center;
+	line-height: 20px;
+	float: left;
+	margin-left: 5px;
+}
+.amountBtn2:hover {
+	background: lightgray;
+}
 #rightSide {
     position: absolute;
     left: 50%;
@@ -249,9 +279,37 @@ body {
 
 }
 
-#statsPopUp {
+#remoteViewer {
+    display: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: grey;
+    z-index: 100;
+}
+#remoteViewerButton {
 	position: absolute;
 	bottom: 0px;
+	left: 300px;
+	width: 200px;
+    height: 25px;
+	padding: 10px;
+    cursor: pointer;
+    font-size: large;
+    user-select: none;
+    line-height: 25px;
+    text-align: center;
+	background: lightgreen;
+    z-index: 101;
+    box-shadow: rgba(0, 0, 0, 0.3) 0px 19px 38px, rgba(0, 0, 0, 0.22) 0px 15px 12px;
+}
+#remoteViewerButton:hover {
+    background: rgb(103, 196, 103);
+}
+
+#statsPopUp {
+	position: absolute;
+	bottom: 40px;
 	left: 300px;
 	width: 200px;
 	padding: 10px;
@@ -262,3 +320,46 @@ body {
 .statText {
 	font-size: 20px;
 }
+
+#remoteHolder {
+    border: 3px solid black;
+    border-radius: 5px;
+}
+#remoteHolder:hover {
+    border: 3px solid gold;
+}
+
+#remoteBottom {
+    display: none;
+    height: 45px;
+    bottom: 0px;
+    position: absolute;
+    background: lightblue;
+    width: 100%;
+    z-index: 100;
+}
+
+
+/* width */
+::-webkit-scrollbar {
+    width: 10px;
+  }
+  
+  /* Track */
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+  }
+   
+  /* Handle */
+  ::-webkit-scrollbar-thumb {
+    background: #888; 
+  }
+  
+  /* Handle on hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555; 
+  }
+
+  #keyBoxLocation {
+    font-weight: bold;
+  }
